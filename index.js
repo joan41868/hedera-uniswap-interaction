@@ -6,8 +6,6 @@ import {
 	Client,
 	Key as HederaKey,
 	TransactionId,
-	FileCreateTransaction, FileAppendTransaction, ContractCreateTransaction, PublicKey,
-	AccountId
 } from "@hashgraph/sdk";
 import {Key} from "@hashgraph/proto";
 import * as fs from 'fs';
@@ -39,83 +37,32 @@ import 'dotenv/config';
 		.connectAccount(createdAcc.toString());
 
 	const gasLimitOverride = {gasLimit: 300000};
-	const nodeID = AccountId.fromString("0.0.3");
-	// const erc20Bytecode = fs.readFileSync('assets/bytecode/ERC20Token.bin').toString();
-	// const abi = JSON.parse(fs.readFileSync('assets/abi/ERC20Token.abi.json').toString());
-	// const tokenContracts = [];
-	// for (let i = 1; i <= 2; i++) {
-	// 	const tokenName = process.env[`TOKEN${i}_NAME`];
-	// 	const tokenSymbol = process.env[`TOKEN${i}_SYMBOL`];
-	// 	const tokenSupply = process.env[`TOKEN${i}_SUPPLY`];
-	// 	const contract = new hethers.ContractFactory(abi, erc20Bytecode, clientWallet);
-	// 	const c = await contract.deploy(tokenName, tokenSymbol, hethers.BigNumber.from(tokenSupply), gasLimitOverride);
-	// 	tokenContracts.push(c);
-	// 	console.log('Deployed token contract for', tokenSymbol, 'at:', c.address);
-	// }
-	const signingKey = PrivateKey.fromStringECDSA(clientWallet._signingKey().privateKey);
-	const uniswapV2FactoryBytecode = fs.readFileSync('assets/bytecode/UniswapV2Factory.bin');
+	const erc20Bytecode = fs.readFileSync('assets/bytecode/ERC20Token.bin').toString();
+	const abi = JSON.parse(fs.readFileSync('assets/abi/ERC20Token.abi.json').toString());
+	const tokenContracts = [];
+	for (let i = 1; i <= 2; i++) {
+		const tokenName = process.env[`TOKEN${i}_NAME`];
+		const tokenSymbol = process.env[`TOKEN${i}_SYMBOL`];
+		const tokenSupply = process.env[`TOKEN${i}_SUPPLY`];
+		const contract = new hethers.ContractFactory(abi, erc20Bytecode, clientWallet);
+		const c = await contract.deploy(tokenName, tokenSymbol, hethers.BigNumber.from(tokenSupply), gasLimitOverride);
+		tokenContracts.push(c);
+		console.log('Deployed token contract for', tokenSymbol, 'at:', c.address);
+	}
+	const uniswapV2FactoryBytecode = fs.readFileSync('assets/bytecode/UniswapV2Factory.bin').toString();
 	const uniswapV2FactoryAbi = JSON.parse(fs.readFileSync('assets/abi/UniswapV2Factory.abi.json').toString());
-	const _uniswapV2cf = new hethers.ContractFactory(uniswapV2FactoryAbi, uniswapV2FactoryBytecode, clientWallet);
-	// console.log(uniswap);
-
-	// const splitContents = splitInChunks(uniswapV2FactoryBytecode, 4096);
-	// console.log(`Contract chunks ${splitContents.length}`);
-	// const fileCreate = await new FileCreateTransaction()
-	// 	.setContents(splitContents[0])
-	// 	.setKeys([PublicKey.fromString(clientWallet._signingKey().compressedPublicKey)])
-	// 	.setNodeAccountIds([nodeID])
-	// 	.setTransactionId(TransactionId.generate(createdAcc))
-	// 	.freeze()
-	// 	.sign(signingKey);
-	// const fcResponse = await fileCreate.execute(client);
-	// const fcReceipt = await fcResponse.getReceipt(client);
-	// const fileID = fcReceipt.fileId.toString();
-	// console.log(`Created file ${fileID}`);
-	// for(let el of splitContents.slice(1)) {
-	// 	const fileAppend = await new FileAppendTransaction()
-	// 		.setContents(el)
-	// 		.setFileId(fileID)
-	// 		.setNodeAccountIds([nodeID])
-	// 		.setTransactionId(TransactionId.generate(createdAcc))
-	// 		.freeze()
-	// 		.sign(signingKey);
-	// 	await fileAppend.execute(client);
-	// }
-	//
-	// const contractCreate = await new ContractCreateTransaction()
-	// 	.setBytecodeFileId(fileID)
-	// 	.setGas(4000000)
-	// 	.setConstructorParameters(hethers.utils.arrayify(_uniswapV2cf.interface.encodeDeploy([clientWallet.address])))
-	// 	.setNodeAccountIds([nodeID])
-	// 	.setTransactionId(TransactionId.generate(createdAcc))
-	// 	.freeze()
-	// 	.sign(signingKey);
-	// const ccResp = await contractCreate.execute(client);
-	// const ccReceipt = await ccResp.getReceipt(client);
-	// console.log(ccReceipt);
-	// INVALID_SOLIDITY_ADDRESS - more zeroes in
+	const _uniswapV2Factory_factory = new hethers.ContractFactory(uniswapV2FactoryAbi, uniswapV2FactoryBytecode, clientWallet);
 
 	console.log(`Fee to saver ${clientWallet.address}`);
-	const uniswapV2Factory = await _uniswapV2cf.deploy(hethers.utils.getAddress(clientWallet.address), gasLimitOverride);
-	console.log('UniswapV2Factory:', uniswapV2Factory);
-	console.log(uniswapV2Factory);
+	const uniswapV2Factory  = await _uniswapV2Factory_factory.deploy(clientWallet.address, gasLimitOverride);
+	console.log('UniswapV2Factory address:', uniswapV2Factory.address);
+
+	const pairCreationResponse = await uniswapV2Factory.createPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
+	console.log(pairCreationResponse);
+
+
 	// TODO: factory.createPair
-	// TODO: periphery - add liquidity
+	// TODO: periphery - add liquidity - separate contract; add liquidity (https://github.com/Uniswap/v2-periphery)
 	// TODO: getCreate2Address from hethers
 })();
 
-// 0x0000000000000000000000000000000001c4bdb6 - previewnet RPT
-// 0x0000000000000000000000000000000001c4bdb8 - previewnet PNDT
-
-// 000000000000000000000000000000000000009cdb
-// concatenated wallet - 0000000000000000000000000000000000000000000000000000000000009cdb
-function splitInChunks(data, chunkSize) {
-	var chunks = [];
-	var num = 0;
-	while (num <= data.length) {
-		var slice = data.slice(num, chunkSize + num);
-		num += chunkSize;
-		chunks.push(slice);
-	}
-	return chunks;
-}

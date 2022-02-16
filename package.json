@@ -14,7 +14,6 @@
     "@hashgraph/proto": "^2.1.3",
     "@hashgraph/sdk": "2.7.0-beta.4",
     "dotenv": "^16.0.0",
-    "ethers": "^5.5.4",
-    "hethers": "git+https://github.com/hashgraph/hethers.js.git#feature/develop"
+    "hethers": "git+https://github.com/hashgraph/hethers.js.git#develop"
   }
 }
