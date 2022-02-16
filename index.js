@@ -10,6 +10,9 @@ import {
 import {Key} from "@hashgraph/proto";
 import * as fs from 'fs';
 import 'dotenv/config';
+// import {Console} from 'console';
+
+// const console = new Console({stderr: fs.createWriteStream('err-log.log'), stdout: fs.createWriteStream('logs.log')});
 
 // main
 (async () => {
@@ -21,7 +24,7 @@ import 'dotenv/config';
 			ECDSASecp256k1: hethers.utils.arrayify(clientWallet._signingKey().compressedPublicKey)
 		})))
 		.setTransactionId(TransactionId.generate(process.env.PREVIEWNET_ACCOUNT_ID))
-		.setInitialBalance(new Hbar(50))
+		.setInitialBalance(new Hbar(100))
 		.setNodeAccountIds([client._network.getNodeAccountIdsForExecute()[0]])
 		.freeze()
 		.sign(PrivateKey.fromString(process.env.PREVIEWNET_PRIVATE_KEY)))
@@ -49,20 +52,65 @@ import 'dotenv/config';
 		tokenContracts.push(c);
 		console.log('Deployed token contract for', tokenSymbol, 'at:', c.address);
 	}
-	const uniswapV2FactoryBytecode = fs.readFileSync('assets/bytecode/UniswapV2Factory.bin').toString();
-	const uniswapV2FactoryAbi = JSON.parse(fs.readFileSync('assets/abi/UniswapV2Factory.abi.json').toString());
-	const _uniswapV2Factory_factory = new hethers.ContractFactory(uniswapV2FactoryAbi, uniswapV2FactoryBytecode, clientWallet);
+	const _uniswapV2FactoryBytecode = fs.readFileSync('assets/bytecode/UniswapV2Factory.bin').toString();
+	const _uniswapV2FactoryAbi = JSON.parse(fs.readFileSync('assets/abi/UniswapV2Factory.abi.json').toString());
+	const _uniswapV2Factory = new hethers.ContractFactory(_uniswapV2FactoryAbi, _uniswapV2FactoryBytecode, clientWallet);
 
-	console.log(`Fee to saver ${clientWallet.address}`);
-	const uniswapV2Factory  = await _uniswapV2Factory_factory.deploy(clientWallet.address, gasLimitOverride);
+	const uniswapV2Factory  = await _uniswapV2Factory.deploy(hethers.constants.AddressZero, gasLimitOverride);
 	console.log('UniswapV2Factory address:', uniswapV2Factory.address);
 
-	const pairCreationResponse = await uniswapV2Factory.createPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
-	console.log(pairCreationResponse);
+	await uniswapV2Factory.createPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
+	const pairAddress = await uniswapV2Factory.getPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
+	console.log('Pair address:', pairAddress.toString()
 
+	);
+	const _uniswapV2RouterBytecode = fs.readFileSync('assets/bytecode/UniswapV2Router.bin').toString();
+	const _uniswapV2RouterAbi = JSON.parse(fs.readFileSync('assets/abi/UniswapV2Router.abi.json').toString());
+	const _routerContractFactory = new hethers.ContractFactory(_uniswapV2RouterAbi, _uniswapV2RouterBytecode, clientWallet);
 
-	// TODO: factory.createPair
+	const WETH_ADDRESS = tokenContracts[0].address;
+	const uniswapV2Router = await _routerContractFactory.deploy(uniswapV2Factory.address, WETH_ADDRESS, gasLimitOverride);
+	console.log('UniswapV2Router address:', uniswapV2Router.address);
+
+	try {
+		const liquidityAddTx = await uniswapV2Router.addLiquidity(
+			tokenContracts[0].address,
+			tokenContracts[1].address,
+			1000,
+			1000,
+			100,
+			100,
+			clientWallet.address,
+			1,
+			gasLimitOverride);
+		console.log(liquidityAddTx);
+	}catch (error) {
+		console.log(error);
+		let txId = error.toString().split(" ").filter(e => e.includes('0.0.0'))[0].split('@')[1];
+		const txIdParsed = createdAcc.toString() + "-"+txId.split('.').join('-');
+		console.log(txIdParsed);
+		const tx = await provider.getTransaction(txIdParsed);
+		console.log(tx);
+	}
 	// TODO: periphery - add liquidity - separate contract; add liquidity (https://github.com/Uniswap/v2-periphery)
 	// TODO: getCreate2Address from hethers
+
+
+	// TODO:  inspect hethers bug - when calling a contract method without a gas limit override, we get:
+	/**
+	 * (node:431316) UnhandledPromiseRejectionWarning: Error: invalid BigNumber value (argument="value", value=undefined, code=INVALID_ARGUMENT, version=bignumber/5.5.0)
+	 *     at Logger.makeError (/home/yoan/WebstormProjects/hedera-uniswap-interaction/node_modules/hethers/packages/logger/lib/index.js:186:21)
+	 *     at Logger.throwError (/home/yoan/WebstormProjects/hedera-uniswap-interaction/node_modules/hethers/packages/logger/lib/index.js:195:20)
+	 *     at Logger.throwArgumentError (/home/yoan/WebstormProjects/hedera-uniswap-interaction/node_modules/hethers/packages/logger/lib/index.js:198:21)
+	 *     at Function.BigNumber.from (/home/yoan/WebstormProjects/hedera-uniswap-interaction/node_modules/hethers/packages/bignumber/lib/bignumber.js:241:23)
+	 *     at numberify (/home/yoan/WebstormProjects/hedera-uniswap-interaction/node_modules/hethers/packages/transactions/lib/index.js:342:34)
+	 *     at Wallet.<anonymous> (/home/yoan/WebstormProjects/hedera-uniswap-interaction/node_modules/hethers/packages/abstract-signer/lib/index.js:189:66)
+	 *     at step (/home/yoan/WebstormProjects/hedera-uniswap-interaction/node_modules/hethers/packages/abstract-signer/lib/index.js:67:23)
+	 *     at Object.next (/home/yoan/WebstormProjects/hedera-uniswap-interaction/node_modules/hethers/packages/abstract-signer/lib/index.js:48:53)
+	 *     at fulfilled (/home/yoan/WebstormProjects/hedera-uniswap-interaction/node_modules/hethers/packages/abstract-signer/lib/index.js:39:58)
+	 *     at processTicksAndRejections (internal/process/task_queues.js:97:5)
+	 * (node:431316) UnhandledPromiseRejectionWarning: Unhandled promise rejection. This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). To terminate the node process on unhandled promise rejection, use the CLI flag `--unhandled-rejections=strict` (see https://nodejs.org/api/cli.html#cli_unhandled_rejections_mode). (rejection id: 3)
+	 * (node:431316) [DEP0018] DeprecationWarning: Unhandled promise rejections are deprecated. In the future, promise rejections that are not handled will terminate the Node.js process with a non-zero exit code.
+	 */
 })();
 
