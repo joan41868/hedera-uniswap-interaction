@@ -24,7 +24,7 @@ import 'dotenv/config';
 			ECDSASecp256k1: hethers.utils.arrayify(clientWallet._signingKey().compressedPublicKey)
 		})))
 		.setTransactionId(TransactionId.generate(process.env.PREVIEWNET_ACCOUNT_ID))
-		.setInitialBalance(new Hbar(100))
+		.setInitialBalance(new Hbar(200))
 		.setNodeAccountIds([client._network.getNodeAccountIdsForExecute()[0]])
 		.freeze()
 		.sign(PrivateKey.fromString(process.env.PREVIEWNET_PRIVATE_KEY)))
@@ -60,10 +60,8 @@ import 'dotenv/config';
 	console.log('UniswapV2Factory address:', uniswapV2Factory.address);
 
 	await uniswapV2Factory.createPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
-	const pairAddress = await uniswapV2Factory.getPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
-	console.log('Pair address:', pairAddress.toString()
-
-	);
+	// const pairAddress = await uniswapV2Factory.getPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
+	// console.log('Pair address:', pairAddress.toString());
 	const _uniswapV2RouterBytecode = fs.readFileSync('assets/bytecode/UniswapV2Router.bin').toString();
 	const _uniswapV2RouterAbi = JSON.parse(fs.readFileSync('assets/abi/UniswapV2Router.abi.json').toString());
 	const _routerContractFactory = new hethers.ContractFactory(_uniswapV2RouterAbi, _uniswapV2RouterBytecode, clientWallet);
@@ -71,27 +69,39 @@ import 'dotenv/config';
 	const WETH_ADDRESS = tokenContracts[0].address;
 	const uniswapV2Router = await _routerContractFactory.deploy(uniswapV2Factory.address, WETH_ADDRESS, gasLimitOverride);
 	console.log('UniswapV2Router address:', uniswapV2Router.address);
+	for(let tokenContract of tokenContracts) {
+		const factoryApprove = await tokenContract.approve(uniswapV2Factory.address, 1000, gasLimitOverride);
+		console.log('factoryApprove', factoryApprove);
+		const routerApprove = await tokenContract.approve(uniswapV2Router.address, 1000, gasLimitOverride);
+		console.log('routerApprove', routerApprove);
+		const walletApprove = await tokenContract.approve(clientWallet.address, 1000, gasLimitOverride);
+		console.log('walletApprove', walletApprove);
+	}
+	const today = new Date();
+	const oneHourAfter = new Date();
+	oneHourAfter.setHours(today.getHours() + 1);
 
 	try {
 		const liquidityAddTx = await uniswapV2Router.addLiquidity(
 			tokenContracts[0].address,
 			tokenContracts[1].address,
-			1000,
-			1000,
 			100,
 			100,
+			10,
+			10,
 			clientWallet.address,
-			1,
+			oneHourAfter.getTime(), // deadline
 			gasLimitOverride);
-		console.log(liquidityAddTx);
+		console.log('Waiting for liquidityAddTx');
+		const awaited = await liquidityAddTx.wait();
+		console.log(awaited);
 	}catch (error) {
+		console.log(`Adding liquidity failed:`);
 		console.log(error);
-		let txId = error.toString().split(" ").filter(e => e.includes('0.0.0'))[0].split('@')[1];
-		const txIdParsed = createdAcc.toString() + "-"+txId.split('.').join('-');
-		console.log(txIdParsed);
-		const tx = await provider.getTransaction(txIdParsed);
+		const tx = await provider.getTransaction(error.transaction.transactionId);
 		console.log(tx);
 	}
+
 	// TODO: periphery - add liquidity - separate contract; add liquidity (https://github.com/Uniswap/v2-periphery)
 	// TODO: getCreate2Address from hethers
 
