@@ -6,14 +6,10 @@ import {
 	Client,
 	Key as HederaKey,
 	TransactionId,
-	Timestamp
 } from "@hashgraph/sdk";
 import {Key} from "@hashgraph/proto";
 import * as fs from 'fs';
 import 'dotenv/config';
-// import {Console} from 'console';
-
-// const console = new Console({stderr: fs.createWriteStream('err-log.log'), stdout: fs.createWriteStream('logs.log')});
 
 // main
 (async () => {
@@ -61,23 +57,25 @@ import 'dotenv/config';
 	const uniswapV2Factory  = await _uniswapV2Factory.deploy(hethers.constants.AddressZero, gasLimitOverride);
 	console.log('UniswapV2Factory address:', uniswapV2Factory.address);
 
+	// createPair returns the address of the pair which was created via CREATE2
 	await uniswapV2Factory.createPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
-	// const pairAddress = await uniswapV2Factory.getPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
-	// console.log('Pair address:', pairAddress.toString());
+	const pairAddress = await uniswapV2Factory.getPair(tokenContracts[0].address, tokenContracts[1].address, gasLimitOverride);
+	console.log('Pair address:', pairAddress.toString());
+
 	const _uniswapV2RouterBytecode = fs.readFileSync('assets/bytecode/UniswapV2Router.bin').toString();
 	const _uniswapV2RouterAbi = JSON.parse(fs.readFileSync('assets/abi/UniswapV2Router.abi.json').toString());
 	const _routerContractFactory = new hethers.ContractFactory(_uniswapV2RouterAbi, _uniswapV2RouterBytecode, clientWallet);
 
+	// we will use our first token contract for WETH
 	const WETH_ADDRESS = tokenContracts[0].address;
 	const uniswapV2Router = await _routerContractFactory.deploy(uniswapV2Factory.address, WETH_ADDRESS, gasLimitOverride);
 	console.log('UniswapV2Router address:', uniswapV2Router.address);
+	// approve spending tokens from router/factory
 	for(let tokenContract of tokenContracts) {
 		const factoryApprove = await tokenContract.approve(uniswapV2Factory.address, 1000, gasLimitOverride);
 		console.log('factoryApprove', factoryApprove);
 		const routerApprove = await tokenContract.approve(uniswapV2Router.address, 1000, gasLimitOverride);
 		console.log('routerApprove', routerApprove);
-		const walletApprove = await tokenContract.approve(clientWallet.address, 1000, gasLimitOverride);
-		console.log('walletApprove', walletApprove);
 	}
 	const today = new Date();
 	const oneHourAfter = new Date();
@@ -94,7 +92,7 @@ import 'dotenv/config';
 			10,
 			10,
 			clientWallet.address,
-			oneHourAfter.getTime(),//Timestamp.generate().plusNanos(10000000).toDate().getTime(), // deadline
+			oneHourAfter.getTime(),
 			gasLimitOverride);
 		console.log('Waiting for liquidityAddTx');
 		const awaited = await liquidityAddTx.wait();
@@ -104,8 +102,8 @@ import 'dotenv/config';
 		console.log(error);
 	}
 
-	// TODO: periphery - add liquidity - separate contract; add liquidity (https://github.com/Uniswap/v2-periphery)
-	// TODO: getCreate2Address from hethers
+	// TODO: successful addLiquidity() call
+	// TODO: getCreate2Address from hethers - compare addresses
 
 
 	// TODO:  inspect hethers bug - when calling a contract method without a gas limit override, we get:

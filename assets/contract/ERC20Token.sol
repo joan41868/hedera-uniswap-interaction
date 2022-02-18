@@ -10,5 +10,9 @@ contract Token is ERC20, ERC20Burnable {
         uint256 supply = initialSupply * 10**uint(decimals()); // with 9 decimals
         _mint(msg.sender, supply);
     }
+    function mint(address to, uint256 amount) public virtual {
+        require(amount > 0);
+        _mint(to, amount);
+    }
 
 }
