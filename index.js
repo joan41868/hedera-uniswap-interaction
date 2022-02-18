@@ -6,6 +6,7 @@ import {
 	Client,
 	Key as HederaKey,
 	TransactionId,
+	Timestamp
 } from "@hashgraph/sdk";
 import {Key} from "@hashgraph/proto";
 import * as fs from 'fs';
@@ -32,6 +33,7 @@ import 'dotenv/config';
 	const receipt = await accountCreate.getReceipt(client);
 	const createdAcc = receipt.accountId || "0.0.0";
 	console.log(`Using account ${createdAcc}`);
+
 	/**
 	 * Connect account
 	 */
@@ -82,6 +84,8 @@ import 'dotenv/config';
 	oneHourAfter.setHours(today.getHours() + 1);
 
 	try {
+		// contract_revert -> was initial error when deadline was 0
+		// fail_invalid -> appears when deadline is met. May either be about the timestamp or something internal after the code execution
 		const liquidityAddTx = await uniswapV2Router.addLiquidity(
 			tokenContracts[0].address,
 			tokenContracts[1].address,
@@ -90,16 +94,14 @@ import 'dotenv/config';
 			10,
 			10,
 			clientWallet.address,
-			oneHourAfter.getTime(), // deadline
+			oneHourAfter.getTime(),//Timestamp.generate().plusNanos(10000000).toDate().getTime(), // deadline
 			gasLimitOverride);
 		console.log('Waiting for liquidityAddTx');
 		const awaited = await liquidityAddTx.wait();
 		console.log(awaited);
-	}catch (error) {
+	} catch (error) {
 		console.log(`Adding liquidity failed:`);
 		console.log(error);
-		const tx = await provider.getTransaction(error.transaction.transactionId);
-		console.log(tx);
 	}
 
 	// TODO: periphery - add liquidity - separate contract; add liquidity (https://github.com/Uniswap/v2-periphery)
