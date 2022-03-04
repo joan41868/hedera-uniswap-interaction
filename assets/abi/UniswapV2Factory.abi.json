@@ -5,6 +5,11 @@
         "internalType": "address",
         "name": "_feeToSetter",
         "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_manager",
+        "type": "address"
       }
     ],
     "payable": false,
@@ -92,6 +97,26 @@
         "type": "address"
       }
     ],
+    "name": "associatePair",
+    "outputs": [],
+    "payable": false,
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "tokenA",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "tokenB",
+        "type": "address"
+      }
+    ],
     "name": "createPair",
     "outputs": [
       {
@@ -136,6 +161,21 @@
   },
   {
     "constant": true,
+    "inputs": [],
+    "name": "getManagerAddress",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
     "inputs": [
       {
         "internalType": "address",
@@ -149,6 +189,21 @@
       }
     ],
     "name": "getPair",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "payable": false,
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "manager",
     "outputs": [
       {
         "internalType": "address",

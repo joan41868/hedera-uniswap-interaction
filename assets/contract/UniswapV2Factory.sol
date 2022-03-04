@@ -6,14 +6,16 @@ import './UniswapV2Pair.sol';
 contract UniswapV2Factory is IUniswapV2Factory {
     address public feeTo;
     address public feeToSetter;
+    address public manager;
 
     mapping(address => mapping(address => address)) public getPair;
     address[] public allPairs;
 
     event PairCreated(address indexed token0, address indexed token1, address pair, uint);
 
-    constructor(address _feeToSetter) public {
+    constructor(address _feeToSetter, address _manager) public {
         feeToSetter = _feeToSetter;
+        manager = _manager;
     }
 
     function allPairsLength() external view returns (uint) {
@@ -34,6 +36,12 @@ contract UniswapV2Factory is IUniswapV2Factory {
         getPair[token0][token1] = pair;
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
+
+        (bool success, bytes memory result) = manager.call(abi.encodeWithSignature("associatePair(address,address,address)", pair, token0, token1));
+        if (!success) {
+            revert();
+        }
+
         emit PairCreated(token0, token1, pair, allPairs.length);
     }
 

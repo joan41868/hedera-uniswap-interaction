@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
@@ -11,9 +12,9 @@
   "license": "ISC",
   "dependencies": {
     "@hashgraph/cryptography": "^1.1.0-beta.5",
-    "@hashgraph/proto": "^2.1.3",
-    "@hashgraph/sdk": "2.7.0-beta.4",
+    "@hashgraph/proto": "2.1.2",
+    "@hashgraph/sdk": "2.9.0",
     "dotenv": "^16.0.0",
-    "hethers": "git+https://github.com/hashgraph/hethers.js.git#develop"
+    "hethers": "github:hashgraph/hethers.js#develop"
   }
 }
