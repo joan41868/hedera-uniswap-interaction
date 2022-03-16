@@ -29,6 +29,10 @@ contract UniswapV2Router02 is IUniswapV2Router02 {
         assert(msg.sender == WETH); // only accept ETH via fallback from the WETH contract
     }
 
+    function getReserves(address tokenA, address tokenB) external view returns (uint reserveA, uint reserveB) {
+        (reserveA, reserveB) = UniswapV2Library.getReserves(factory, tokenA, tokenB);
+    }
+
     // **** ADD LIQUIDITY ****
     function _addLiquidity(
         address tokenA,

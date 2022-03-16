@@ -37,12 +37,11 @@ contract UniswapV2Factory is IUniswapV2Factory {
         getPair[token1][token0] = pair; // populate mapping in the reverse direction
         allPairs.push(pair);
 
-        (bool success, bytes memory result) = manager.call(abi.encodeWithSignature("associatePair(address,address,address)", pair, token0, token1));
-        if (!success) {
-            revert();
-        }
-
         emit PairCreated(token0, token1, pair, allPairs.length);
+    }
+
+    function associatePair(address tokenA, address tokenB) external {
+        IUniswapV2Pair(getPair[tokenA][tokenB]).associate(manager);
     }
 
     function setFeeTo(address _feeTo) external {
@@ -53,5 +52,9 @@ contract UniswapV2Factory is IUniswapV2Factory {
     function setFeeToSetter(address _feeToSetter) external {
         require(msg.sender == feeToSetter, 'UniswapV2: FORBIDDEN');
         feeToSetter = _feeToSetter;
+    }
+
+    function getManagerAddress() external view returns(address) {
+        return manager;
     }
 }

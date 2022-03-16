@@ -12,6 +12,7 @@ contract Manager is HederaTokenService {
         address[] memory tokens = new address[](2);
         tokens[0] = token1;
         tokens[1] = token2;
+        // this / super (does not work with no prefixing)
         int result = HederaTokenService.associateTokens(pair, tokens);
         if (result != 22) {
             revert();

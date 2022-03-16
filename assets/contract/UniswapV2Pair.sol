@@ -69,6 +69,13 @@ contract UniswapV2Pair is IUniswapV2Pair, UniswapV2ERC20 {
         token1 = _token1;
     }
 
+    function associate(address manager) external {
+        (bool success, bytes memory result) = manager.delegatecall(abi.encodeWithSignature("associatePair(address,address,address)", address(this), token0, token1));
+        if (!success) {
+            revert();
+        }
+    }
+
     // update reserves and, on the first call per block, price accumulators
     function _update(uint balance0, uint balance1, uint112 _reserve0, uint112 _reserve1) private {
         require(balance0 <= uint112(-1) && balance1 <= uint112(-1), 'UniswapV2: OVERFLOW');
